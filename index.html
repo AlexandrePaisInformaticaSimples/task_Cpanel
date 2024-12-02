@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Tarefas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #007bff;
+            color: #fff;
+            padding: 1em 0;
+            text-align: center;
+        }
+        main {
+            padding: 1em;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .task-list {
+            margin-bottom: 2em;
+        }
+        .task {
+            background: #fff;
+            margin: 0.5em 0;
+            padding: 1em;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .task p {
+            margin: 0;
+        }
+        .task button {
+            margin-left: 1em;
+            padding: 0.5em 1em;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .task button:first-child {
+            background-color: #28a745;
+            color: white;
+        }
+        .task button:last-child {
+            background-color: #dc3545;
+            color: white;
+        }
+        form {
+            display: flex;
+            margin-bottom: 2em;
+        }
+        form input {
+            flex: 1;
+            padding: 0.5em;
+            margin-right: 0.5em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        form button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 0.5em 1em;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Gerenciador de Tarefas</h1>
+    </header>
+    <main>
+        <form id="task-form">
+            <input type="text" id="task-name" placeholder="Digite o nome da tarefa" required>
+            <button type="submit">Adicionar Tarefa</button>
+        </form>
+        <section class="task-list" id="open-tasks">
+            <h2>Tarefas Abertas</h2>
+        </section>
+        <section class="task-list" id="in-progress-tasks">
+            <h2>Tarefas em Processamento</h2>
+        </section>
+        <section class="task-list" id="closed-tasks">
+            <h2>Tarefas Fechadas</h2>
+        </section>
+    </main>
+    <script>
+        const API_URL = 'https://task.farmaciaserra.pt/apais'; // Substitua pelo domínio do backend ou use localhost se localmente
+
+        // Função para carregar tarefas do backend
+        async function loadTasks() {
+            const response = await fetch(`${API_URL}/tasks`);
+            const tasks = await response.json();
+            renderTasks(tasks);
+        }
+
+        // Função para adicionar nova tarefa
+        async function addTask(name, status = 'open') {
+            await fetch(`${API_URL}/tasks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, status })
+            });
+            loadTasks();
+        }
+
+        // Função para atualizar o status de uma tarefa
+        async function updateTaskStatus(id, status) {
+            await fetch(`${API_URL}/tasks/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            loadTasks();
+        }
+
+        // Função para excluir uma tarefa
+        async function deleteTask(id) {
+            await fetch(`${API_URL}/tasks/${id}`, { method: 'DELETE' });
+            loadTasks();
+        }
+
+        // Função para renderizar as tarefas na interface
+        function renderTasks(tasks) {
+            const openTasks = document.getElementById('open-tasks');
+            const inProgressTasks = document.getElementById('in-progress-tasks');
+            const closedTasks = document.getElementById('closed-tasks');
+
+            // Limpar listas
+            openTasks.innerHTML = '<h2>Tarefas Abertas</h2>';
+            inProgressTasks.innerHTML = '<h2>Tarefas em Processamento</h2>';
+            closedTasks.innerHTML = '<h2>Tarefas Fechadas</h2>';
+
+            // Adicionar tarefas nas listas correspondentes
+            tasks.forEach(task => {
+                const taskElement = document.createElement('div');
+                taskElement.className = 'task';
+                taskElement.innerHTML = `
+                    <p>${task.name}</p>
+                    <button onclick="updateTaskStatus(${task.id}, '${nextStatus(task.status)}')">
+                        Mover para ${nextStatus(task.status)}
+                    </button>
+                    <button onclick="deleteTask(${task.id})">Excluir</button>
+                `;
+                if (task.status === 'open') openTasks.appendChild(taskElement);
+                if (task.status === 'in-progress') inProgressTasks.appendChild(taskElement);
+                if (task.status === 'closed') closedTasks.appendChild(taskElement);
+            });
+        }
+
+        // Função para definir o próximo status
+        function nextStatus(current) {
+            return current === 'open' ? 'in-progress' : current === 'in-progress' ? 'closed' : 'closed';
+        }
+
+        // Adicionar evento ao formulário
+        document.getElementById('task-form').addEventListener('submit', (event) => {
+            event.preventDefault();
+            const taskName = document.getElementById('task-name').value;
+            addTask(taskName);
+            document.getElementById('task-name').value = '';
+        });
+
+        // Inicializar carregando as tarefas
+        loadTasks();
+    </script>
+</body>
+</html>
